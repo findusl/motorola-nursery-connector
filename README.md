@@ -132,9 +132,13 @@ cargo build --locked --release
 ```
 
 The earlier file-based login was tested end to end: fresh identity, emailed code,
-account resume, camera export, then 20 seconds of decoded live video. The new
-interactive wrapper has automated selection tests; it has not yet repeated that
-whole physical-camera test. Recovery tests of the receiver are documented in
+account resume, camera export, then 20 seconds of decoded live video. On
+2026-11-15, the published interactive Compose setup at commit `dd1ca50` was also
+tested with empty account state: fresh email code, camera listing, LAN IP entry,
+credential generation, and deployment of a receiver built from that GitHub
+checkout. Frigate received video and wrote fresh recordings. Only one physical
+camera was available; multiple-camera selection has automated coverage only.
+Recovery tests of the receiver are documented in
 [the recovery report](docs/RECOVERY-CHAOS.txt). These observations are not a
 promise of reliability or support for other models. The [technical runbook](docs/OPERATIONS.md)
 documents settings, watchdogs and metrics.

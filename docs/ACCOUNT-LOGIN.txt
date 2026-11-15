@@ -256,3 +256,17 @@ no account auto-refresh daemon or automatic email requests were deployed. Its
 production image and credential files were preserved. Temporary test containers
 are removed after the restored stream is checked; private test state remains
 on the owner's server for later session-lifetime tests.
+
+PUBLISHED INTERACTIVE FLOW — 2026-11-15
+
+The published Compose account service at commit dd1ca50 was run through its
+interactive setup command, with an empty persistent state directory. Inputs
+were the owner's email, a freshly emailed OTP, and the camera LAN IP. The sole
+listed camera was selected automatically. A private terminal driver supplied
+these inputs; no phone tokens or previous camera credentials were imported.
+The wizard generated camera.json and config.json. Ansible deployed the receiver
+built on the host from that GitHub checkout, mounting the generated credentials
+and adapting network-specific settings. It authenticated on its first attempt;
+Frigate received video and wrote fresh recordings. Account and receiver source
+were not patched for this test. This is one successful integration test, not a
+long-term expiry test or a physical multi-camera validation.
