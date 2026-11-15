@@ -2,16 +2,22 @@
 disclosure-default: ai-generated
 providers:
   - OpenAI
-scope: Project-specific implementation, tests, deployment files, and documentation.
+scope: Project-specific implementation, tests, deployment files, documentation, commit messages, and Git commit/push operations.
 last-updated: 2026-11-15
 ---
 
 # AI disclosure
 
-All project-specific code was written by AI coding agents through OpenAI Codex,
-under the maintainer's direction. The maintainer supplied the hardware, account,
-requirements, feedback, and authorization for experiments. This is not a claim
-of comprehensive human code review or an independent security audit.
+All project-specific code and documentation were written by AI coding agents
+through OpenAI Codex, including the README and this disclosure. AI agents also
+write commit messages, create Git commits, and execute pushes to GitHub under
+the maintainer's direction and authorization.
+
+The maintainer supplied the hardware, account, requirements, feedback, and
+authorization for experiments and publication. Commits use the maintainer's
+configured Git identity; that identity does not mean the changes or commit
+messages were hand-written or comprehensively reviewed by a human. This is not
+a claim of comprehensive human code review or an independent security audit.
 
 **It works for the maintainer. It is experimental software, not a broadly tested
 camera integration or a safety-critical monitoring system.** Automated tests and

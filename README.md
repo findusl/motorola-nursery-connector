@@ -5,8 +5,10 @@ FFmpeg, go2rtc or Frigate through a local RTSP endpoint. Includes independent
 email-code login and camera selection. No Motorola/Orbweb SDK, Android runtime,
 or emulator is required to build or run it.
 
-**All project-specific code is AI-written. It works for me; it has not had a
-comprehensive human review or independent security audit.** See
+**All project-specific code and documentation, including this README, are
+AI-written. AI agents also write commit messages, create commits, and push them
+to GitHub under the maintainer's direction and authorization. It works for me;
+it has not had a comprehensive human review or independent security audit.** See
 [AI disclosure](AI_DISCLOSURE.md) for scope and validation limits.
 
 ## Compatibility and privacy
