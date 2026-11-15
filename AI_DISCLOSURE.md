@@ -28,6 +28,11 @@ This disclosure excludes upstream dependencies and their license texts. They
 have their own authors and provenance. Proprietary APKs, decompiled code, native
 libraries, private recordings, and account credentials are not distributed here.
 
+The investigation used [REA — Reverse Engineer Anything](https://github.com/morluto/rea)
+and its `reverse-engineer-anything` skill to guide artifact analysis and evidence
+tracking. Credit to REA's authors and contributors for those tools and instructions.
+REA is research tooling, not a receiver runtime dependency.
+
 The file uses the repository-level shape of the voluntary, draft
 [AI Disclosure Convention](https://github.com/ggfevans/ai-disclosure).
 It is not a certification or a claim that this convention is a universal standard.

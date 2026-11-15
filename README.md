@@ -136,8 +136,16 @@ account resume, camera export, then 20 seconds of decoded live video. The new
 interactive wrapper has automated selection tests; it has not yet repeated that
 whole physical-camera test. Recovery tests of the receiver are documented in
 [the recovery report](docs/RECOVERY-CHAOS.txt). These observations are not a
-promise of reliability or support for other models. The [technical runbook](README.txt)
+promise of reliability or support for other models. The [technical runbook](docs/OPERATIONS.md)
 documents settings, watchdogs and metrics.
+
+## Acknowledgments
+
+Thanks to [REA — Reverse Engineer Anything](https://github.com/morluto/rea)
+and its `reverse-engineer-anything` skill. Its tools and investigation workflow
+helped the AI agents inspect the app and native library, trace protocol behavior,
+and distinguish code-derived findings from runtime observations. REA was used
+for research; it is not a dependency of the published receiver.
 
 ## License
 
