@@ -1,0 +1,41 @@
+crypto-native-vectors.jsonl contains only invented inputs and outputs measured
+by an offline oracle invoking the supplied Android native SDK on2026-11-13.
+The oracle ran with container networking disabled. No device/account/network
+capture contents, proprietary executable code or original-source snippets are
+included. These vectors check interoperability, not cryptographic security.
+
+CBC inputs: key bytes0..15; IV bytes31..0 (first16used for mode1);
+plaintext byte[i]=(i*17+3) mod256, lengths32/64/96. SDK mode1 means16byteblocks,
+mode3 means32byteblocks, both with128bitkey. Native oracle also verified that
+repeated encryption calls reset IV and decryption recovered all input bytes.
+DH inputs/outputs are explicit synthetic integer fields in each JSONline.
+
+Receiver CBC16 uses RustCrypto aes0.8.4 + cbc0.1.2 (MIT OR Apache-2.0).
+CBC32 uses simple-rijndael0.3.2 (MIT, Pure-Peace); reviewed published src/lib.rs,
+impls.rs, rijndael.rs,paddings.rs,Cargo.toml and LICENSE before adoption.
+It has no runtime dependencies or build script. This small dependency is not
+claimed audited or constanttime. It uses lookup tables and an unsafe internal
+push4 helper with preallocated block buffers. We validate nonempty aligned
+bounded input and exact key/IV/block lengths before invoking it, and bypass
+its unchecked padding decoder with identitypadding. Existing strict protocol
+padding validation is used. Owned key/IV buffers are zeroized on drop; internal
+upstream expanded-key temporaries are not guaranteed zeroized.
+
+Primary references:
+https://docs.rs/cbc/0.1.2/cbc/
+https://docs.rs/aes/0.8.4/aes/
+https://github.com/Pure-Peace/simple-rijndael
+https://docs.rs/simple-rijndael/0.3.2/simple_rijndael/
+The similarly named rijndael0.1.1 crate advertises WIP and was not selected.
+Context7 lookup did not index simple-rijndael; published crate source and
+maintainer repository were used instead.
+
+Extended oracle: crypto-native-large.jsonl records MD5 checksums of complete
+synthetic native ciphertexts for512,1024,1472,4096,16384,32768,65536bytes,
+both modes. MD5 here is a compact compatibility checksum, not an authenticity
+claim. Private fullciphertext reference: oracle-20261113/vectors-large.jsonl.
+Each SDK case additionally verifies wholeplaintext decryption and identical
+repeat encryption (IVreset). Independent Rusttests match all14 checksums,
+decrypt allbytes, and verifyrepeat encryption. Same invented key/IV/data
+pattern above. Executed with docker --network none on the private research host, image
+local/motorola-offline-oracle:20261113-large; no activecamera session touched.

@@ -1,0 +1,14 @@
+{"mode":1,"n":512,"ciphertext_md5":"3d46dfd2bcf3e7caaa8e56c734166413"}
+{"mode":1,"n":1024,"ciphertext_md5":"c79c7e2cdde75348e67a9cf6cae090a9"}
+{"mode":1,"n":1472,"ciphertext_md5":"6dd730216bc9d0a385d847b93fc8ba8b"}
+{"mode":1,"n":4096,"ciphertext_md5":"c133b1c2d74d1f463dd9ca15874a1c9d"}
+{"mode":1,"n":16384,"ciphertext_md5":"18d5af52955f56490efc33cdcc203650"}
+{"mode":1,"n":32768,"ciphertext_md5":"4032085fd0ff5cb936a1f8ee3c279275"}
+{"mode":1,"n":65536,"ciphertext_md5":"0ad907c8d8dfe269241a0f7a5b456a5f"}
+{"mode":3,"n":512,"ciphertext_md5":"9f57070e9a69d8070d7b2b0af1540a04"}
+{"mode":3,"n":1024,"ciphertext_md5":"1a5c042c392405bcb27d741db923b35f"}
+{"mode":3,"n":1472,"ciphertext_md5":"fcf8501863fa9e66b84c948a21d34ab4"}
+{"mode":3,"n":4096,"ciphertext_md5":"3cabc5f18f4368e40d22422cb7ee311b"}
+{"mode":3,"n":16384,"ciphertext_md5":"2caafae69a5c857d6d8fe0b5aa68fc40"}
+{"mode":3,"n":32768,"ciphertext_md5":"97388a38b53e3bd6b6f82937426c7369"}
+{"mode":3,"n":65536,"ciphertext_md5":"af9eb4b5e2bf27b7f2294ee88ec81093"}

@@ -1,0 +1,258 @@
+Independent account onboarding — 2026-11-15
+
+The Rust account helper can request an email code, authenticate with its own
+persistent client identity, enumerate the owner's cameras, and resume that
+account session in a fresh process without another code. This was tested with
+the owner's authorized account. It does not load Motorola/Orbweb libraries or
+copy the phone's identity, application storage, or account tokens.
+
+This helper is separate from the deployed receiver. The README documents its
+interactive setup wizard. The advanced code-file workflow below is also supported. Successful
+account login does not remove Motorola's cloud dependencies or establish that
+the camera stops uploading video. Camera streaming and account authentication
+are separate protocols.
+
+CONFIRMED RUNTIME MILESTONE
+
+- Certificate-verified TLS to primary.moto.5gencare.com:3388 succeeded. The OTP
+  request redirected to another vendor hostname, where it was accepted.
+- A fresh independently generated identity, MOAN followed by 28 random hex
+  characters, was accepted. No Android-derived identifier was supplied.
+- One emailed six-digit code was submitted on the same TLS connection as the
+  accepted OTP request. Login succeeded and private account state was saved.
+- Camera enumeration returned one camera. Its camera SID and device token
+  matched the camera credentials already used by the receiver. Actual values,
+  camera names, identifiers and account details are deliberately omitted here.
+- A fresh, separate helper container resumed the saved account session and
+  enumerated the camera without another OTP request. An additional fresh
+  container also successfully resumed with the saved master token.
+- Offline export produced receiver credentials from the newly enumerated camera.
+  An isolated receiver using only that export established its direct camera
+  tunnel on its first attempt. FFmpeg then decoded to a null sink for 20 seconds,
+  reporting 200 output frames and zero decode-error lines. No footage was saved.
+  The decoder retained the separately configured RTSP authentication from
+  Frigate; those are camera RTSP credentials, not phone account cookies.
+- The first decoder invocation rejected the unsupported rw_timeout option
+  before opening media. The installed RTSP demuxer documents timeout instead;
+  the corrected bounded test succeeded. This was a test-command error, not an
+  account-authentication or transport failure.
+- The existing production receiver was paused during the login experiment and
+  automatically restored healthy afterwards. No firmware, pairing, camera
+  settings or parent-monitor configuration was changed. Apart from the
+  authorized login and associated per-client session state, no account settings
+  were changed. The original app's additional secret-setup command was not
+  sent; enumeration worked without it in this experiment.
+
+These observations establish independent onboarding for this account and app
+protocol version. They do not establish token lifetime, unlimited simultaneous
+clients, or compatibility with every region/account type. The short stream
+test establishes that the export works; it is not a new long-duration soak test.
+
+REPRODUCIBLE HELPER WORKFLOW
+
+Implementation: src/bin/motorola-account.rs, src/account.rs
+and src/account_transport.rs. Dockerfile.account builds a
+separate account-helper image and runs the locked Rust tests during its build.
+The runtime image contains the independent binary, not the proprietary SDK.
+
+Run from the repository root on a machine with Docker and Python 3. The local
+state directory must belong to the UID running the container. Use a new private
+directory for initial login; do not point this example at production secrets.
+
+  docker build -f Dockerfile.account -t local/motorola-account .
+  umask 077
+  export ACCOUNT_STATE="$PWD/private-runtime/account-example"
+  mkdir -p "$ACCOUNT_STATE"
+  chmod 700 "$ACCOUNT_STATE"
+
+Create the private email JSON without putting the address in shell history:
+
+  python3 - <<'PY'
+  import getpass, json, os
+  from pathlib import Path
+  p = Path(os.environ['ACCOUNT_STATE']) / 'email.json'
+  with p.open('x', encoding='utf-8') as f:
+      json.dump({'email': getpass.getpass('Account email: ')}, f)
+  p.chmod(0o600)
+  PY
+
+An optional connectivity check performs TLS only; it does not request an email:
+
+  docker run --rm --user "$(id -u):$(id -g)" \
+    -v "$ACCOUNT_STATE:/state" local/motorola-account probe --state-dir /state
+
+The following command sends an OTP email. Run it once and leave it running:
+
+  docker run --rm --user "$(id -u):$(id -g)" \
+    -v "$ACCOUNT_STATE:/state" local/motorola-account login \
+    --state-dir /state --email-file /state/email.json --code-file /state/code.txt
+
+After the otp_requested_waiting_for_code event, use another terminal in the
+same repository root to create the code file. The atomic rename prevents the
+helper from seeing a partially written code. Do not use shell tracing:
+
+  umask 077
+  python3 - <<'PY'
+  import getpass, os
+  from pathlib import Path
+  d = Path('private-runtime/account-example')
+  code = getpass.getpass('Email code: ').strip()
+  if len(code) != 6 or not code.isascii() or not code.isdigit():
+      raise SystemExit('Expected six ASCII digits')
+  p = d / 'code.pending'
+  with p.open('x', encoding='ascii') as f:
+      f.write(code + '\n')
+  p.chmod(0o600)
+  os.replace(p, d / 'code.txt')
+  PY
+
+The helper waits at most ten minutes, services server ping messages while
+waiting, removes the consumed code file, and writes session.json and cameras.json.
+It refuses an already initialized login directory or a preexisting code file.
+Do not repeatedly request codes after an ambiguous failure: inspect the fixed
+error event first. The current helper does not save raw server replies. Earlier research builds did.
+
+Resume in a fresh process/container, using the same state directory:
+
+  docker run --rm --user "$(id -u):$(id -g)" \
+    -v "$ACCOUNT_STATE:/state" local/motorola-account resume --state-dir /state
+
+resume uses the current account session token, with a bounded master-token
+fallback on the recovered rejection status. resume-master explicitly selects
+the saved master token; it is a diagnostic command, not a required login step.
+Successful resume persists the returned session token. This is not yet an
+automatic long-running account refresh service.
+
+Export the sole listed camera to a new receiver credential file, entirely
+offline. The helper supports explicit --camera-id selection when more than one
+camera exists; it otherwise refuses ambiguous selection. It never overwrites
+an existing output file:
+
+  docker run --rm --network none --user "$(id -u):$(id -g)" \
+    -v "$ACCOUNT_STATE:/state" local/motorola-account export-camera \
+    --state-dir /state --output /state/camera.json
+
+The export maps device SID to receiver session_id, device TOKEN to
+transport_password, and adds transport_user=orbweb_user and
+rendezvous=rdz.orbwebsys.com. Account SESSION_ID is a different value and must
+not be substituted for the camera SID. Exporting does not install credentials
+or start a camera connection; deployment and validation remain separate steps.
+
+Keep directories mode 0700 and credential files mode 0600 (0400 is appropriate
+for read-only inputs). The helper checks private file/directory modes and saves
+state privately. Email, OTP, raw replies, identity, account tokens and camera
+credentials belong only in private storage, never Git or application logs.
+private-runtime/ and private-analysis/ are Git-excluded in this repository.
+The helper emits fixed event/error labels and counts, not secret values.
+
+RECOVERED WIRE PROTOCOL
+
+Transport is direct certificate-verified TLS over TCP port 3388, not HTTP or
+STARTTLS. Requests and responses are LF-terminated text lines. Handle partial
+lines and multiple lines per read; never equate a TLS read with a message.
+Fields below are placeholders, not actual account values. Commands shown end
+in a single LF. No HTTP headers, JSON envelope or prior guest login is required
+by the tested minimal path.
+
+  v3_otp CLIENT_ID email EMAIL 6
+  v3_loginset USER_ID CLIENT_ID email EMAIL ENTERED_OTP
+  v3_session USER_ID SELECTED_ACCOUNT_TOKEN ACCOUNT_SESSION_ID
+  v3_dlist
+
+OTP reply: v3_otp USER_ID OPAQUE_VALUE. A negative status is a failure except
+the recovered -6 redirect, whose next field is the new server hostname. Retry
+the saved OTP request at that host. The successful reply's OPAQUE_VALUE is
+called oneTimePass in app code, but its meaning remains unresolved; the UI uses
+the emailed, user-entered code for loginset rather than automatically using it.
+
+Login reply:
+  v3_loginset USER_ID SESSION_TOKEN MASTER_TOKEN SESSION_ID SERVER_DOMAIN [COUNTRY]
+
+Resume reply:
+  v3_session USER_ID NEW_SESSION_TOKEN UNUSED_FIELD SERVER_DOMAIN [COUNTRY]
+
+Tokens are opaque. Preserve the master token and session ID across successful
+resume; replace the session token. Resume can redirect with -6. The app attempts
+a master-token fallback on -9; this status alone does not establish expiry.
+The independent helper bounds redirects and verifies vendor-domain hostnames
+and TLS certificates. Restricting redirects to *.moto.5gencare.com is a helper
+policy; the inspected app does not impose that suffix check.
+
+Device-list reply:
+  v3_dlist N (ID UDID MODEL URI_ENCODED_NAME DEVICE_TOKEN DEVICE_SID COUNTRY) * N
+
+Each device record has exactly seven fields. COUNTRY may be the literal
+undefined. A server ping line is answered with pong followed by LF. No periodic
+client-originated ping was identified on this traced account path.
+
+STATIC EVIDENCE REFERENCES
+
+Source: supplied Motorola Nursery 2.2.18, version code 4350, including matching
+split APKs. Paths below are relative to private-analysis/blutter/output/asm/;
+addresses are libapp.so Dart AOT addresses, not liborbweb offsets. Extracted
+decompilation remains private; these references document how to reproduce the
+inspection from the same application version.
+
+- assets/flutter_assets/assets/moto_fepe-service.json supplies primary and
+  moto.5gencare.com. fepe_core/src/fepe_setting.dart::init 0x1133860 joins the
+  hostname at 0x1133918-0x1133968. The app can override it with a saved server.
+- fepe_core/src/networks/service/socket_implement.dart::initSocket 0x7372e8
+  passes port 3388 at 0x73750c. Its closure 0x73ae00 calls SecureSocket.secure
+  at 0x73b064 using the configured hostname; the bad-certificate callback
+  rejects certificates. Request framing is at 0x73b180-0x73b1d8.
+- The same file's dataSocketHandler 0x73f9c4 accumulates LF-delimited lines;
+  dataHandler 0x73fd38 splits tokens. ping dispatch 0xfca784 leads to
+  fepe_auth/src/fepe_auth_service_internal.dart::pingHandler 0xfd31f8,
+  which writes pong plus LF at 0xfd3260-0xfd3284.
+- fepeapp/ui/account_login_widget/account_login_widget_view_model.dart::
+  _sendNewCode 0x7da600 constructs CLIENT_ID + ' email ' + EMAIL at
+  0x7da7c8-0x7da7f4. FepeAuthServiceInternal.otp 0x7dac60 appends 6 and
+  initializes v3_otp. The immediate 12 is a tagged Dart Smi representing 6.
+  otpHandler 0xfce3f0 handles redirect and returned user ID.
+- fepeapp/ui/account_signup_onetimepassword_widget/
+  account_signup_onetimepassword_view_model.dart::onCompletedPinCode
+  0xbde4f0 constructs the loginset arguments at 0xbde6c8-0xbde7b8.
+  FepeAuthServiceInternal.loginSet 0x7e2dfc writes them to the existing socket;
+  loginSetHandler 0xfce6dc parses/stores the response fields above.
+- fepe_core/src/fepe_setting.dart::getDeviceUuid 0x76cc74 persists
+  PREF_DEVICE_UUID_V5. fepe_core/src/utils/device_util.dart::getDeviceUuid
+  0x76ce5c normalizes Android-derived data, truncates to 28 characters, then
+  prefixes MOAN at 0x76cfa8. Independent random identity acceptance is runtime
+  evidence from this test, not a conclusion drawn solely from that code.
+- SocketClient.sessionV3 0x736d0c formats user/token/session ID at
+  0x737140-0x73720c; sessionV3Handler 0x73ffd0 parses the renewed token.
+  FepeAuthServiceInternal.handleV3Session 0xfdf76c contains master fallback.
+- fepe_device/src/device_internal.dart::dlist 0x85d41c sends v3_dlist;
+  dlistHandler 0xfd4270 parses the seven-field records. CameraModel._startM2M
+  in fepe_device/src/models/camera_model.dart at 0x764938 passes device SID
+  and token into Orbweb.startM2M at 0x764ea0. The Java bridge
+  com/example/orbweb/OrbwebPlugin.java::buildCameraInfo uses setSID and
+  setIDPassword('orbweb_user', deviceTOKEN), establishing the credential mapping.
+
+Private investigation notes: private-analysis/login-20261115/
+otp-wire-findings.txt and session-findings.txt. This document updates the
+previous static-only gaps in docs/CLIENT-REGISTRATION.txt; that older document
+describes the historical SDK-backed receiver rather than the current runtime.
+
+STILL UNKNOWN
+
+- Session/master-token TTL, long-term refresh reliability and server rate limits.
+- Whether this login or a later phone login invalidates another client session;
+  phone-session invalidation and sustained simultaneous access were not tested.
+- Whether camera transport credentials rotate with account actions or time.
+- Other regional endpoints, account types, revoked access and empty/shared lists.
+- Whether the app's additional secret-setup step is required for operations
+  beyond the tested enumeration path. Omission here is not a general claim.
+- Any privacy guarantee about independent camera uploads. This onboarding
+  requires vendor infrastructure even when the resulting media path is direct.
+
+VALIDATION AND DEPLOYMENT BOUNDARY
+
+104 offline Rust tests and Clippy with warnings denied passed, including bounded
+TLS framing/timeouts, account-message validation and no-overwrite export tests.
+The separate Linux container build also ran the locked test suite successfully.
+The normal receiver still loads its configured camera credentials at startup;
+no account auto-refresh daemon or automatic email requests were deployed. Its
+production image and credential files were preserved. Temporary test containers
+are removed after the restored stream is checked; private test state remains
+on the owner's server for later session-lifetime tests.

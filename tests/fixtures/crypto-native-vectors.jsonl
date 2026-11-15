@@ -1,0 +1,9 @@
+{"kind":"dh","g":5,"p":23,"a":6,"b":15,"A":8,"B":19,"S_a":2,"S_b":2}
+{"kind":"dh","g":65537,"p":2147483647,"a":1234567,"b":7654321,"A":1348705017,"B":910097005,"S_a":1057551626,"S_b":1057551626}
+{"kind":"dh","g":11,"p":104729,"a":1,"b":2,"A":11,"B":121,"S_a":121,"S_b":121}
+{"kind":"cbc","mode":1,"n":32,"hex":"e84d95cce7a90455e01b199479a9167fe7ca48fdcfbd4effc3815f891050fe3d"}
+{"kind":"cbc","mode":1,"n":64,"hex":"e84d95cce7a90455e01b199479a9167fe7ca48fdcfbd4effc3815f891050fe3dbb5cff291dff4d909b9c9666a62f40728af64fb615dac88b01d8e4b2709c1cf6"}
+{"kind":"cbc","mode":1,"n":96,"hex":"e84d95cce7a90455e01b199479a9167fe7ca48fdcfbd4effc3815f891050fe3dbb5cff291dff4d909b9c9666a62f40728af64fb615dac88b01d8e4b2709c1cf629fd705c1df417e4b04a111fdccaa268ea028c20c5f846b3a7275832ea012999"}
+{"kind":"cbc","mode":3,"n":32,"hex":"b724f8beefd774303bb51ce54d2dd5c66a53462e30af823d27544918811e9137"}
+{"kind":"cbc","mode":3,"n":64,"hex":"b724f8beefd774303bb51ce54d2dd5c66a53462e30af823d27544918811e9137aa76136d6cbb30ce8aa3372e9f368dcf8b70dffb5180acc4f0b81514cd49d0b7"}
+{"kind":"cbc","mode":3,"n":96,"hex":"b724f8beefd774303bb51ce54d2dd5c66a53462e30af823d27544918811e9137aa76136d6cbb30ce8aa3372e9f368dcf8b70dffb5180acc4f0b81514cd49d0b72355d78834d34a532bdb47ed4f7ca558465963c50f1ea56c7d5472c57aeb7b4e"}

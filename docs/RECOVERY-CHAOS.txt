@@ -1,0 +1,97 @@
+Disconnect investigation and container recovery tests — 2026-11-14
+All clock times in this report are Europe/Berlin (CET).
+
+Historical findings
+07:28:29.401 approximately: last incoming tunnel activity and valid video RTP,
+reconstructed from Prometheus age metrics. go2rtc source read timeout07:28:34;
+Frigate abandoned the established PLAY at07:28:51, before the old60s video
+watchdog expired. Heartbeat misses rose; TCP reset arrived07:29:02.654,
+about33seconds after traffic stopped. Next bootstrap registered but never
+returned capabilities within45s; the subsequent attempt succeeded. Recording
+metadata gap07:28:28.900–07:30:07.000 (98.100seconds).
+
+11:52:37: abrupt EOF with previously healthy incoming traffic. Reauthentication
+at11:52:44.746, PLAY11:52:47.707. Recording intervals overlap, including an
+unusually long14.5s segment; interval coverage does NOT prove continuous frames.
+
+12:12:58: abrupt EOF, then two bootstrap105 rejections, a failed direct candidate
+and109 rejection before successful recovery. Recording gap62.832seconds.
+The numeric replies do not establish credential expiry or a camera reboot.
+
+No post-repair framing failure, backpressure or tunnel sequence discontinuity
+was observed around these historical failures. Local Prometheus targets stayed
+up and Frigate uptime advanced continuously. This excludes an observed service
+restart but not camera-specific Wi-Fi/VLAN/Internet trouble. There is no historic
+packet capture or camera-internal log identifying the ultimate reset/EOF cause.
+
+Improvement
+Explicit nearest-media deadline wakes the event loop independently of the8s
+heartbeat schedule. Service configuration uses20s instead of60s to catch the
+observed stall before Frigate abandons PLAY. Standalone default remains60s.
+Protocol heartbeats and legitimate45s cloud/inbound negotiation are unchanged.
+Timeout events now include last video and last incoming traffic ages; candidate
+failures use bounded classifications. An in-progress write can delay timer
+handling up to10s. Faster detection cannot guarantee faster cloud recovery.
+88 offline tests and Clippy passed before the recovery deployment.
+
+Chaos scope
+User authorized connector/Frigate container failures only. No Docker-daemon or
+host reboot, camera firmware/reset, router or host-firewall changes. Each fault
+has an independent restoration guard and is followed by receiver/frame/recording
+progress checks before another fault. Network restoration preserves the exact
+connector endpoint IP, aliases and gateway priority; its backend stays attached.
+Finite tests verify these cases, not universal recovery under every failure.
+
+Baseline results before patch
+- Receiver main-process SIGKILL: automatic Docker restart; ready5.6s,
+  fresh frames and recording10.8s after fault. Guard not needed.
+- Receiver paused35s: no container restart; fresh frames and recording20.9s
+  after unpause.
+- Connector egress removed35s: exact attachment restored; fresh frames15.8s,
+  fresh recording31.3s after reconnect; no container restart.
+Remaining test and deployment results follow when verified.
+
+Private historical evidence: private-analysis/chaos-20261114/.
+These include credential-bearing raw logs; do not publish that directory.
+
+Completed baseline: Frigate stopped~30s then restarted unchanged; fresh frames
+15.7s and recording26.0s after start. All four baseline cases passed.
+
+20s-deadline repeat (same35s faults)
+Pause: freshframes15.8s,recording26.1s after unpause (baseline20.9s/20.9s).
+Network: freshframes46.9s,recording41.7s,ready21.0s after reconnect. This was
+slower than baseline, despite the media timer firing correctly at20.0019s.
+Discovery requests while the source interface was missing failed and grew
+backoff4/8/16s. The last failure occurred1.3s before network restoration, leaving
+almost15s of avoidable retry delay. This negative result motivated another fix.
+
+Final interface-wait improvement
+Before session network activity, the supervisor checks whether it can bind the
+configured source address (UDP route/bind inspection without sending packets).
+If absent it polls every1s, remains unready/waiting_network, and makes no cloud
+requests or repeated failure/backoff increments. Restoration proceeds to normal
+setup. The gate is cancellable by existing signals/global test deadline. It
+checks address availability, not remote reachability; real backend failures
+retain bounded backoff.92 offline tests and strict Clippy passed.
+
+Final35s network repeat: ready5.501s, freshframes15.857s, freshrecording26.209s
+after network restoration. Actual local_network_wait18:30:09.534UTC through
+18:30:23.551UTC (14016ms at1000ms polling), authenticated18:30:24.734UTC.
+Only the normal2s media-timeout retry occurred; no discovery failure/backoff
+buildup while the interface was absent. Recorded-video return was faster than
+the previous iteration; single trials with~5s observation polling are not a
+statistical benchmark or guarantee of improvement for every outage.
+
+Seven total guarded faults passed: fourbaseline,two20s-repeats,onefinalnetwork.
+No independent guard rescue was needed. Final independent checks: connector and
+Frigate running/unpaused/healthy, Frigate camera/process5.1FPS/skipped0, source
+network IP/aliases/gateway priority/memberships restored exactly, no pending
+restoration guards. Tests ended; both services remain running.
+
+Final deployed image:
+sha256:63406a177f6bf74501de67f455c30a6b44409d6d104bf1c70064aa1edc6267ad
+Ansible deployment succeeded; identical second run changed0/failed0. Prometheus
+scrape healthy. Previous native images/configs and older vendor rollback remain.
+Private reproducible evidence: baseline-results.json,postpatch-results.json,
+interfacewait-results.json,RESULTS.txt,recovery-deployment.txt under
+private-analysis/chaos-20261114/. Raw logs there remain private.

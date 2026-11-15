@@ -1,0 +1,39 @@
+services:
+  account:
+    profiles: [setup]
+    build:
+      context: .
+      dockerfile: Dockerfile.account
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    command: [setup, --state-dir, /state]
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./state:/state
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 128m
+  receiver:
+    build: .
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    command: [--config, /etc/connector/config.json]
+    restart: unless-stopped
+    volumes:
+      - ./state/config.json:/etc/connector/config.json:ro
+      - ./state/camera.json:/etc/connector/camera.json:ro
+    ports:
+      - "127.0.0.1:8554:8554"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    healthcheck:
+      test: [CMD, /usr/local/bin/motorola-receiver, healthcheck, --config, /etc/connector/config.json]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

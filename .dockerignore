@@ -1,0 +1,12 @@
+*
+!Cargo.toml
+!Cargo.lock
+!src/
+!src/**
+!tests/
+!tests/**
+!Dockerfile
+
+!Dockerfile.account
+!LICENSE
+!THIRD_PARTY_NOTICES.md
