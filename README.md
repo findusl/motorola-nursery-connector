@@ -31,7 +31,9 @@ performs motion detection.
 
 Prerequisites: Docker Engine with Compose v2, access to your Motorola account's
 email, and a network route from the Docker host to the camera. Obtain the camera's
-LAN IPv4 address from your router; discovery across VLANs is not implemented.
+LAN IPv4 address from your router; automatic discovery of that address is not
+implemented. The camera can be on a separate VLAN, as in the maintainer's tested
+setup, provided routing and firewall rules allow the receiver to reach it.
 Run all commands below from this repository's root after cloning/downloading it.
 Use an account that already owns the paired camera. Close the phone's live view
 during initial testing: simultaneous phone/receiver sessions have interfered.
